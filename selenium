@@ -1,0 +1,50 @@
+from lxml import etree
+import requests
+from bs4 import BeautifulSoup
+from selenium import webdriver
+import pymysql
+import time
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.chrome.options import Options
+import re
+
+options = Options()
+options.binary_location = 'C:\Program Files\Google\Chrome\Application\chrome.exe'
+driver = webdriver.Chrome(chrome_options=options)
+driver.get('http://www.ptpress.com.cn/search/books')
+data = driver.page_source
+#print(data)#app > div:nth-child(1) > div > div > div.search_main.down_search > button > i
+wait = WebDriverWait(driver,10)
+confirm_btn = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR,'#app > div:nth-child(1) > div > div > div.search_main.down_search > button > i')))
+search_btn = driver.find_element_by_id("searchVal")
+time.sleep(5)
+search_btn.send_keys("Python")
+confirm_btn.click()
+time.sleep(5)
+html = driver.page_source
+soup = BeautifulSoup(html,'lxml')
+a = soup.select('.rows')
+ls1 = '<img src="(.*?)"/></div>'
+pattern = re.compile(ls1,re.S)
+res_img = re.findall(pattern,str(a))
+ls2 = '<img src=".*?"/></div>.*?<p>(.*?)</p></a>'
+pattern1 = re.compile(ls2,re.S)
+res_test = re.findall(pattern1,str(a))
+conn = pymysql.connect(host='127.0.0.1',port=3306,user='root',passwd='4046246',db = 'test',charset='utf8',connect_timeout=1000)
+cursor = conn.cursor()
+sql = 'create table class(id int(50) primary key auto_increment,name varchar(100) not null,text varchar(100) not null)'
+cursor.execute(sql)
+cursor.execute('show tables;')
+target = soup.ul.find_all('a')
+urls = []
+texts = []
+print(res_test,res_img)
+time.sleep(5)
+for i,j in res_test,res_img:
+    # urls.append(tag.get('href'))
+    # texts.append(tag.get_text())
+    #sql = 'insert into class(name,text)values(%s,%s)'
+    cursor.execute('insert into class(name,text)values(%s,%s)',(i,j))
+    conn.commit()
